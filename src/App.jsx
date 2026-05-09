@@ -5,8 +5,68 @@ const SUPABASE_URL = "https://itbmqztqgqvrexdjqyme.supabase.co";
 const SUPABASE_KEY = "sb_publishable_cgTt5_TJwEUNT4Ku8xJ-JA_hGpqIJxY";
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// ─── Costanti ─────────────────────────────────────────────────────────────────
-const today = new Date();
+function LoginScreen() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isRegister, setIsRegister] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState("");
+
+  const handle = async () => {
+    if (!email || !password) { setError("Inserisci email e password"); return; }
+    setLoading(true); setError(""); setSuccess("");
+    try {
+      if (isRegister) {
+        const { error: e } = await sb.auth.signUp({ email, password });
+        if (e) throw e;
+        setSuccess("Registrazione completata! Controlla la tua email per confermare.");
+      } else {
+        const { error: e } = await sb.auth.signInWithPassword({ email, password });
+        if (e) throw e;
+      }
+    } catch (e) {
+      setError(e.message === "Invalid login credentials" ? "Email o password errati" : e.message);
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div style={{ minHeight:"100vh", background:"linear-gradient(135deg,#6366f1 0%,#8b5cf6 100%)", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+      <div style={{ background:"#fff", borderRadius:24, padding:40, width:400, maxWidth:"100%", boxShadow:"0 20px 60px #0003" }}>
+        <div style={{ textAlign:"center", marginBottom:32 }}>
+          <div style={{ fontSize:48, marginBottom:8 }}>🏡</div>
+          <h1 style={{ fontSize:24, fontWeight:800, color:"#1e293b", margin:0 }}>Casa Vacanze</h1>
+          <p style={{ color:"#94a3b8", fontSize:14, marginTop:4 }}>Gestionale · Brindisi</p>
+        </div>
+        <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+          <label style={{ display:"flex", flexDirection:"column", gap:4, fontSize:13, fontWeight:600, color:"#475569" }}>
+            Email
+            <input type="email" value={email} onChange={e=>setEmail(e.target.value)}
+              placeholder="nome@email.com"
+              style={{ border:"1.5px solid #e2e8f0", borderRadius:10, padding:"10px 14px", fontSize:14, outline:"none" }}
+              onKeyDown={e=>e.key==="Enter"&&handle()} />
+          </label>
+          <label style={{ display:"flex", flexDirection:"column", gap:4, fontSize:13, fontWeight:600, color:"#475569" }}>
+            Password
+            <input type="password" value={password} onChange={e=>setPassword(e.target.value)}
+              placeholder="••••••••"
+              style={{ border:"1.5px solid #e2e8f0", borderRadius:10, padding:"10px 14px", fontSize:14, outline:"none" }}
+              onKeyDown={e=>e.key==="Enter"&&handle()} />
+          </label>
+          {error && <div style={{ background:"#fef2f2", color:"#ef4444", borderRadius:8, padding:"10px 14px", fontSize:13, fontWeight:600 }}>❌ {error}</div>}
+          {success && <div style={{ background:"#ecfdf5", color:"#059669", borderRadius:8, padding:"10px 14px", fontSize:13, fontWeight:600 }}>✅ {success}</div>}
+          <button onClick={handle} disabled={loading} style={{ background:"#6366f1", color:"#fff", border:"none", borderRadius:12, padding:"12px", fontSize:15, fontWeight:700, cursor:"pointer", marginTop:4, opacity:loading?0.7:1 }}>
+            {loading ? "..." : isRegister ? "Registrati" : "Accedi"}
+          </button>
+          <button onClick={()=>{setIsRegister(!isRegister);setError("");setSuccess("");}} style={{ background:"none", border:"none", color:"#6366f1", fontSize:13, cursor:"pointer", fontWeight:600, textAlign:"center" }}>
+            {isRegister ? "Hai già un account? Accedi" : "Non hai un account? Registrati"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}const today = new Date();
 const fmt = d => d.toISOString().split("T")[0];
 const addDays = (d, n) => { const r = new Date(d); r.setDate(r.getDate() + n); return r; };
 const fmtDate = d => new Date(d + "T12:00").toLocaleDateString("it-IT");
@@ -75,10 +135,7 @@ const INIT_INVENTORY = [
   { room:"pulizie",   name:"Guanti",              needs_reorder:false },
   { room:"pulizie",   name:"Spray vetri",         needs_reorder:false },
   { room:"pulizie",   name:"Detergente superfici",needs_reorder:false },
-];
-
-// ─── UI Primitives ────────────────────────────────────────────────────────────
-function Card({ children, style }) {
+];function Card({ children, style }) {
   return <div style={{ background:"#fff", borderRadius:16, boxShadow:"0 1px 4px #0001,0 4px 24px #0001", padding:24, ...style }}>{children}</div>;
 }
 function Modal({ title, onClose, children, wide }) {
@@ -123,8 +180,6 @@ function StBadge({ status }) {
   const c = STATUSES[status] || STATUSES.confirmed;
   return <span style={{ background:c.bg, color:c.color, border:`1px solid ${c.color}44`, borderRadius:20, padding:"2px 10px", fontSize:12, fontWeight:600, whiteSpace:"nowrap" }}>{c.label}</span>;
 }
-
-// ─── Pie Chart ────────────────────────────────────────────────────────────────
 function PieChart({ slices, size=180 }) {
   const total = slices.reduce((s,c) => s+c.value, 0);
   if (total === 0) return null;
@@ -152,10 +207,7 @@ function PieChart({ slices, size=180 }) {
       ))}
     </svg>
   );
-}
-
-// ─── Booking Form ─────────────────────────────────────────────────────────────
-function BookingForm({ booking, onSave, onClose }) {
+}function BookingForm({ booking, onSave, onClose }) {
   const empty = { guest_name:"", channel:"booking", check_in:fmt(today), check_out:fmt(addDays(today,3)), adults:2, children:0, nationality:"", status:"confirmed", paid:false, notes:"", partner_cost:0 };
   const [f, setF] = useState(booking ? {
     guest_name: booking.guest_name, channel: booking.channel, check_in: booking.check_in,
@@ -172,7 +224,6 @@ function BookingForm({ booking, onSave, onClose }) {
   const platLabel = f.channel==="booking" ? "Commissione Booking 15%" : f.channel==="airbnb" ? "Commissione Airbnb 3%" : null;
   const netEst = Math.max(0, total-ced-platFee-Number(f.partner_cost||0));
   const season = LOW_MONTHS.includes(new Date(f.check_in+"T12:00").getMonth()) ? "Bassa stagione" : "Alta stagione";
-
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
       <Inp label="Nome Ospite" value={f.guest_name} onChange={e=>set("guest_name",e.target.value)} placeholder="Mario Rossi"/>
@@ -223,10 +274,7 @@ function BookingForm({ booking, onSave, onClose }) {
       </div>
     </div>
   );
-}
-
-// ─── Dashboard ────────────────────────────────────────────────────────────────
-function Dashboard({ bookings, expenses }) {
+}function Dashboard({ bookings, expenses }) {
   const todayStr = fmt(today);
   const active   = bookings.find(b=>b.status!=="cancelled"&&b.check_in<=todayStr&&b.check_out>todayStr);
   const arriving = bookings.filter(b=>b.check_in===todayStr&&b.status!=="cancelled");
@@ -333,10 +381,7 @@ function Dashboard({ bookings, expenses }) {
       )}
     </div>
   );
-}
-
-// ─── Prenotazioni ─────────────────────────────────────────────────────────────
-function Bookings({ bookings, onAdd, onUpdate, onDelete }) {
+}function Bookings({ bookings, onAdd, onUpdate, onDelete }) {
   const [search, setSearch] = useState("");
   const [fSt, setFSt] = useState("all");
   const [fCh, setFCh] = useState("all");
@@ -421,10 +466,7 @@ function Bookings({ bookings, onAdd, onUpdate, onDelete }) {
       )}
     </div>
   );
-}
-
-// ─── Calendario ───────────────────────────────────────────────────────────────
-function CalendarView({ bookings }) {
+}function CalendarView({ bookings }) {
   const [vDate, setVDate] = useState(new Date(today.getFullYear(),today.getMonth(),1));
   const [sel, setSel] = useState(null);
   const year=vDate.getFullYear(), month=vDate.getMonth();
@@ -512,10 +554,7 @@ function CalendarView({ bookings }) {
       )}
     </div>
   );
-}
-
-// ─── Contabilità ──────────────────────────────────────────────────────────────
-function Accounting({ bookings, expenses, onAddExpense, onDeleteExpense }) {
+}function Accounting({ bookings, expenses, onAddExpense, onDeleteExpense }) {
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState({ date:fmt(today), category:"Pulizie", description:"", amount:"" });
   const [fy, setFy] = useState(String(today.getFullYear()));
@@ -663,10 +702,7 @@ function Accounting({ bookings, expenses, onAddExpense, onDeleteExpense }) {
       )}
     </div>
   );
-}
-
-// ─── Magazzino ────────────────────────────────────────────────────────────────
-function Inventory({ inventory, onToggle, onAdd, onDelete }) {
+}function Inventory({ inventory, onToggle, onAdd, onDelete }) {
   const [activeRoom, setActiveRoom] = useState("camera");
   const [showModal, setShowModal] = useState(false);
   const [newName, setNewName] = useState("");
@@ -751,27 +787,39 @@ function Inventory({ inventory, onToggle, onAdd, onDelete }) {
       )}
     </div>
   );
-}
-
-// ─── App Root ─────────────────────────────────────────────────────────────────
-const TABS=[
-  { id:"dashboard",  label:"Dashboard",    icon:"🏠" },
-  { id:"bookings",   label:"Prenotazioni", icon:"📋" },
-  { id:"calendar",   label:"Calendario",   icon:"📅" },
-  { id:"accounting", label:"Contabilità",  icon:"💰" },
-  { id:"inventory",  label:"Magazzino",    icon:"📦" },
-];
-
-export default function App() {
+}export default function App() {
   const [tab, setTab] = useState("dashboard");
   const [bookings,  setBookings]  = useState([]);
   const [expenses,  setExpenses]  = useState([]);
   const [inventory, setInventory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [session, setSession] = useState(null);
+  const [userRole, setUserRole] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
-  // Carica dati da Supabase
   useEffect(() => {
+    sb.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      if (session) loadRole(session.user.id);
+      else setAuthLoading(false);
+    });
+    const { data: { subscription } } = sb.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (session) loadRole(session.user.id);
+      else { setUserRole(null); setAuthLoading(false); }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const loadRole = async (userId) => {
+    const { data } = await sb.from("user_roles").select("role").eq("user_id", userId).single();
+    setUserRole(data?.role || "partner");
+    setAuthLoading(false);
+  };
+
+  useEffect(() => {
+    if (!session) return;
     async function load() {
       const [{ data: b }, { data: e }, { data: i }] = await Promise.all([
         sb.from("bookings").select("*").order("check_in", { ascending:false }),
@@ -780,7 +828,6 @@ export default function App() {
       ]);
       setBookings(b || []);
       setExpenses(e || []);
-      // Se magazzino vuoto, popola con articoli iniziali
       if (!i || i.length === 0) {
         const { data: inserted } = await sb.from("inventory").insert(INIT_INVENTORY).select();
         setInventory(inserted || []);
@@ -790,57 +837,25 @@ export default function App() {
       setLoading(false);
     }
     load();
-  }, []);
+  }, [session]);
 
-  // CRUD Prenotazioni
-  const addBooking = async f => {
-    setSaving(true);
-    const { data } = await sb.from("bookings").insert([f]).select();
-    if(data) setBookings(p=>[data[0],...p]);
-    setSaving(false);
-  };
-  const updateBooking = async (id, f) => {
-    setSaving(true);
-    const { data } = await sb.from("bookings").update(f).eq("id",id).select();
-    if(data) setBookings(p=>p.map(b=>b.id===id?data[0]:b));
-    setSaving(false);
-  };
-  const deleteBooking = async id => {
-    setSaving(true);
-    await sb.from("bookings").delete().eq("id",id);
-    setBookings(p=>p.filter(b=>b.id!==id));
-    setSaving(false);
-  };
+  const addBooking = async f => { setSaving(true); const { data } = await sb.from("bookings").insert([f]).select(); if(data) setBookings(p=>[data[0],...p]); setSaving(false); };
+  const updateBooking = async (id, f) => { setSaving(true); const { data } = await sb.from("bookings").update(f).eq("id",id).select(); if(data) setBookings(p=>p.map(b=>b.id===id?data[0]:b)); setSaving(false); };
+  const deleteBooking = async id => { setSaving(true); await sb.from("bookings").delete().eq("id",id); setBookings(p=>p.filter(b=>b.id!==id)); setSaving(false); };
+  const addExpense = async f => { setSaving(true); const { data } = await sb.from("expenses").insert([f]).select(); if(data) setExpenses(p=>[data[0],...p]); setSaving(false); };
+  const deleteExpense = async id => { setSaving(true); await sb.from("expenses").delete().eq("id",id); setExpenses(p=>p.filter(e=>e.id!==id)); setSaving(false); };
+  const addInventory = async f => { setSaving(true); const { data } = await sb.from("inventory").insert([f]).select(); if(data) setInventory(p=>[...p,data[0]]); setSaving(false); };
+  const toggleInventory = async (id, val) => { await sb.from("inventory").update({ needs_reorder:val }).eq("id",id); setInventory(p=>p.map(i=>i.id===id?{...i,needs_reorder:val}:i)); };
+  const deleteInventory = async id => { await sb.from("inventory").delete().eq("id",id); setInventory(p=>p.filter(i=>i.id!==id)); };
 
-  // CRUD Spese
-  const addExpense = async f => {
-    setSaving(true);
-    const { data } = await sb.from("expenses").insert([f]).select();
-    if(data) setExpenses(p=>[data[0],...p]);
-    setSaving(false);
-  };
-  const deleteExpense = async id => {
-    setSaving(true);
-    await sb.from("expenses").delete().eq("id",id);
-    setExpenses(p=>p.filter(e=>e.id!==id));
-    setSaving(false);
-  };
+  if(authLoading) return (
+    <div style={{ minHeight:"100vh", background:"linear-gradient(135deg,#6366f1 0%,#8b5cf6 100%)", display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:14 }}>
+      <span style={{ fontSize:52 }}>🏡</span>
+      <div style={{ fontWeight:700, fontSize:17, color:"#fff" }}>Caricamento...</div>
+    </div>
+  );
 
-  // CRUD Magazzino
-  const addInventory = async f => {
-    setSaving(true);
-    const { data } = await sb.from("inventory").insert([f]).select();
-    if(data) setInventory(p=>[...p,data[0]]);
-    setSaving(false);
-  };
-  const toggleInventory = async (id, val) => {
-    await sb.from("inventory").update({ needs_reorder:val }).eq("id",id);
-    setInventory(p=>p.map(i=>i.id===id?{...i,needs_reorder:val}:i));
-  };
-  const deleteInventory = async id => {
-    await sb.from("inventory").delete().eq("id",id);
-    setInventory(p=>p.filter(i=>i.id!==id));
-  };
+  if(!session) return <LoginScreen />;
 
   if(loading) return (
     <div style={{ minHeight:"100vh", background:"#f1f5f9", display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:14 }}>
@@ -849,7 +864,16 @@ export default function App() {
     </div>
   );
 
-  const invAlerts=inventory.filter(i=>i.needs_reorder).length;
+  const isAdmin = userRole === "admin";
+  const ALL_TABS = [
+    { id:"dashboard",  label:"Dashboard",    icon:"🏠", adminOnly:true },
+    { id:"bookings",   label:"Prenotazioni", icon:"📋", adminOnly:false },
+    { id:"calendar",   label:"Calendario",   icon:"📅", adminOnly:false },
+    { id:"accounting", label:"Contabilità",  icon:"💰", adminOnly:true },
+    { id:"inventory",  label:"Magazzino",    icon:"📦", adminOnly:false },
+  ];
+  const TABS = ALL_TABS.filter(t => !t.adminOnly || isAdmin);
+  const invAlerts = inventory.filter(i=>i.needs_reorder).length;
 
   return (
     <div style={{ fontFamily:"'Segoe UI',system-ui,sans-serif", minHeight:"100vh", background:"#f1f5f9" }}>
@@ -858,7 +882,7 @@ export default function App() {
           <span style={{ fontSize:24 }}>🏡</span>
           <div>
             <div style={{ fontWeight:800, fontSize:15, color:"#1e293b", lineHeight:1 }}>Casa Vacanze</div>
-            <div style={{ fontSize:10, color:"#94a3b8" }}>Gestionale · Brindisi</div>
+            <div style={{ fontSize:10, color:"#94a3b8" }}>{isAdmin?"👑 Admin":"👤 Partner"} · Brindisi</div>
           </div>
         </div>
         <nav style={{ display:"flex", gap:2, alignItems:"center" }}>
@@ -876,15 +900,18 @@ export default function App() {
             );
           })}
           <div style={{ marginLeft:6, fontSize:11, color:saving?"#f59e0b":"#10b981", fontWeight:600, background:saving?"#fffbeb":"#ecfdf5", borderRadius:20, padding:"3px 8px" }}>
-            {saving?"⏳ Salvataggio...":"☁️ Sincronizzato"}
+            {saving?"⏳ Salvataggio...":"☁️ Sync"}
           </div>
+          <button onClick={()=>sb.auth.signOut()} style={{ marginLeft:8, border:"1px solid #e2e8f0", borderRadius:8, padding:"5px 12px", cursor:"pointer", fontSize:12, fontWeight:600, color:"#ef4444", background:"#fff" }}>
+            Esci
+          </button>
         </nav>
       </header>
       <main style={{ maxWidth:1200, margin:"0 auto", padding:"22px 16px" }}>
-        {tab==="dashboard"  && <Dashboard  bookings={bookings} expenses={expenses}/>}
+        {tab==="dashboard"  && isAdmin && <Dashboard  bookings={bookings} expenses={expenses}/>}
         {tab==="bookings"   && <Bookings   bookings={bookings} onAdd={addBooking} onUpdate={updateBooking} onDelete={deleteBooking}/>}
         {tab==="calendar"   && <CalendarView bookings={bookings}/>}
-        {tab==="accounting" && <Accounting bookings={bookings} expenses={expenses} onAddExpense={addExpense} onDeleteExpense={deleteExpense}/>}
+        {tab==="accounting" && isAdmin && <Accounting bookings={bookings} expenses={expenses} onAddExpense={addExpense} onDeleteExpense={deleteExpense}/>}
         {tab==="inventory"  && <Inventory  inventory={inventory} onToggle={toggleInventory} onAdd={addInventory} onDelete={deleteInventory}/>}
       </main>
     </div>
