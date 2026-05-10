@@ -843,7 +843,7 @@ function PieChart({ slices, size=180 }) {
   const syncBooking = async () => {
     setSaving(true);
     try {
-      const proxy = 'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://ical.booking.com/v1/export?t=1d2c6c28-a639-47b8-81a1-b6340ad9fac1');
+      const proxy = 'https://ical-proxy.pellicano-mohair06.workers.dev/' + encodeURIComponent('https://ical.booking.com/v1/export?t=1d2c6c28-a639-47b8-81a1-b6340ad9fac1');
       const res = await fetch(proxy);
       const ical = await res.text();
       const blocks = ical.split('BEGIN:VEVENT');
