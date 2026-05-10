@@ -857,9 +857,9 @@ function PieChart({ slices, size=180 }) {
         const ci = fmtD(get('DTSTART'));
         const co = fmtD(get('DTEND'));
         const uid = get('UID');
-        if (!ci || !co || !uid) continue;
+        console.log("Evento:", uid, ci, co); if (!ci || !co || !uid) continue;
         const { data: existing } = await sb.from('bookings').select('id').eq('ical_uid', uid).maybeSingle();
-        if (!existing) {
+        console.log("Existing:", existing); if (!existing) {
           const n = Math.max(0, Math.round((new Date(co) - new Date(ci)) / 86400000));
           const { data } = await sb.from('bookings').insert([{
             guest_name: summary || 'Ospite Booking',
