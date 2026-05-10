@@ -851,11 +851,11 @@ function PieChart({ slices, size=180 }) {
       for (let i = 1; i < blocks.length; i++) {
         const block = blocks[i];
         const get = key => { const m = block.match(new RegExp(key + ':([^\r\n]+)')); return m ? m[1].trim() : ''; };
-        const fmtD = s => { if(!s) return ''; const d = s.replace(/[^0-9]/g,'').substring(0,8); return d.substring(0,4)+'-'+d.substring(4,6)+'-'+d.substring(6,8); };
+        const fmtD = s => { if(!s) return ''; const d = s.replace(/[^0-9]/g,'').substring(0,8); return d.substring(0,4)+'-'+d.substring(4,6)+'-'+d.substring(6,8); }; const getDate = key => { const m = block.match(new RegExp(key + '[^:]*:([^\r\n]+)')); return m ? m[1].trim() : ''; };
         const summary = get('SUMMARY');
         // non filtriamo più i CLOSED
-        const ci = fmtD(get('DTSTART'));
-        const co = fmtD(get('DTEND'));
+        const ci = fmtD(getDate('DTSTART'));
+        const co = fmtD(getDate('DTEND'));
         const uid = get('UID');
         console.log("Evento:", uid, ci, co); if (!ci || !co || !uid) continue;
         const { data: existing } = await sb.from('bookings').select('id').eq('ical_uid', uid).maybeSingle();
