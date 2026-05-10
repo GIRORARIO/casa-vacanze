@@ -839,6 +839,43 @@ function PieChart({ slices, size=180 }) {
     load();
   }, [session]);
 
+
+  const syncBooking = async () => {
+    setSaving(true);
+    try {
+      const proxy = 'https://corsproxy.io/?' + encodeURIComponent('https://ical.booking.com/v1/export?t=1d2c6c28-a639-47b8-81a1-b6340ad9fac1');
+      const res = await fetch(proxy);
+      const ical = await res.text();
+      const blocks = ical.split('BEGIN:VEVENT');
+      let imported = 0;
+      for (let i = 1; i < blocks.length; i++) {
+        const block = blocks[i];
+        const get = key => { const m = block.match(new RegExp(key + ':([^\r\n]+')); return m ? m[1].trim() : ''; };
+        const fmtD = s => { if(!s) return ''; const d = s.replace(/[^0-9]/g,'').substring(0,8); return d.substring(0,4)+'-'+d.substring(4,6)+'-'+d.substring(6,8); };
+        const summary = get('SUMMARY');
+        if (summary.toLowerCase().includes('closed') || summary.toLowerCase().includes('chiuso')) continue;
+        const ci = fmtD(get('DTSTART'));
+        const co = fmtD(get('DTEND'));
+        const uid = get('UID');
+        if (!ci || !co || !uid) continue;
+        const { data: existing } = await sb.from('bookings').select('id').eq('ical_uid', uid).single();
+        if (!existing) {
+          const n = Math.max(0, Math.round((new Date(co) - new Date(ci)) / 86400000));
+          const { data } = await sb.from('bookings').insert([{
+            guest_name: summary || 'Ospite Booking',
+            channel: 'booking', check_in: ci, check_out: co,
+            adults: 1, children: 0, nationality: '', status: 'confirmed',
+            paid: false, total: n * 100, soggiorno: 0, cedolare: 0,
+            platform_fee: 0, partner_cost: 0,
+            notes: 'Importato da Booking.com', ical_uid: uid
+          }]).select();
+          if (data) { setBookings(p => [data[0], ...p]); imported++; }
+        }
+      }
+      alert(imported > 0 ? imported + ' prenotazioni importate!' : 'Nessuna nuova prenotazione.');
+    } catch(e) { alert('Errore: ' + e.message); }
+    setSaving(false);
+  };
   const addBooking = async f => { setSaving(true); const { data } = await sb.from("bookings").insert([f]).select(); if(data) setBookings(p=>[data[0],...p]); setSaving(false); };
   const updateBooking = async (id, f) => { setSaving(true); const { data } = await sb.from("bookings").update(f).eq("id",id).select(); if(data) setBookings(p=>p.map(b=>b.id===id?data[0]:b)); setSaving(false); };
   const deleteBooking = async id => { setSaving(true); await sb.from("bookings").delete().eq("id",id); setBookings(p=>p.filter(b=>b.id!==id)); setSaving(false); };
@@ -902,6 +939,7 @@ function PieChart({ slices, size=180 }) {
           <div style={{ marginLeft:6, fontSize:11, color:saving?"#f59e0b":"#10b981", fontWeight:600, background:saving?"#fffbeb":"#ecfdf5", borderRadius:20, padding:"3px 8px" }}>
             {saving?"⏳ Salvataggio...":"☁️ Sync"}
           </div>
+          {isAdmin && <button onClick={syncBooking} style={{ marginLeft:8, border:"1px solid #003580", borderRadius:8, padding:"5px 12px", cursor:"pointer", fontSize:12, fontWeight:700, color:"#003580", background:"#e8f0fb" }}>🔵 Sync Booking</button>}
           <button onClick={()=>sb.auth.signOut()} style={{ marginLeft:8, border:"1px solid #e2e8f0", borderRadius:8, padding:"5px 12px", cursor:"pointer", fontSize:12, fontWeight:600, color:"#ef4444", background:"#fff" }}>
             Esci
           </button>
