@@ -853,7 +853,7 @@ function PieChart({ slices, size=180 }) {
         const get = key => { const m = block.match(new RegExp(key + ':([^\r\n]+)')); return m ? m[1].trim() : ''; };
         const fmtD = s => { if(!s) return ''; const d = s.replace(/[^0-9]/g,'').substring(0,8); return d.substring(0,4)+'-'+d.substring(4,6)+'-'+d.substring(6,8); };
         const summary = get('SUMMARY');
-        if (summary.toLowerCase().includes('closed') || summary.toLowerCase().includes('chiuso')) continue;
+        // non filtriamo più i CLOSED
         const ci = fmtD(get('DTSTART'));
         const co = fmtD(get('DTEND'));
         const uid = get('UID');
